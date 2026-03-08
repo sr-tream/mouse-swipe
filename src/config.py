@@ -28,6 +28,10 @@ def read_config_file():
             swipe_button.swipe_right = _get_array(config[button].get("swipe_right"))
             swipe_button.swipe_up = _get_array(config[button].get("swipe_up"))
             swipe_button.swipe_down = _get_array(config[button].get("swipe_down"))
+        swipe_button.scroll_left = _get_array(config[button].get("scroll_left"))
+        swipe_button.scroll_right = _get_array(config[button].get("scroll_right"))
+        swipe_button.scroll_up = _get_array(config[button].get("scroll_up"))
+        swipe_button.scroll_down = _get_array(config[button].get("scroll_down"))
 
         swipe_buttons.append(swipe_button)
 

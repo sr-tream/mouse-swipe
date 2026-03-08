@@ -97,10 +97,40 @@ async def task_handle_mouse_events(mouse):
                     if swipe_button.freeze:
                         should_forward = False
 
-                    if event.code == ecodes.REL_X:
+                    if event.code == ecodes.REL_WHEEL:
+                        if not(swipe_button.moved):
+                            if event.value > 0 and len(swipe_button.scroll_up) > 0:
+                                emulate_key_press(swipe_button.scroll_up)
+                                swipe_button.scrolled = True
+                            elif event.value < 0 and len(swipe_button.scroll_down) > 0:
+                                emulate_key_press(swipe_button.scroll_down)
+                                swipe_button.scrolled = True
+                            elif swipe_button.scroll:
+                                if event.value > 0 and len(swipe_button.swipe_up) > 0:
+                                    emulate_key_press(swipe_button.swipe_up)
+                                    swipe_button.scrolled = True
+                                elif event.value < 0 and len(swipe_button.swipe_down) > 0:
+                                    emulate_key_press(swipe_button.swipe_down)
+                                    swipe_button.scrolled = True
+                    elif event.code == ecodes.REL_HWHEEL:
+                        if not(swipe_button.moved):
+                            if event.value > 0 and len(swipe_button.scroll_right) > 0:
+                                emulate_key_press(swipe_button.scroll_right)
+                                swipe_button.scrolled = True
+                            elif event.value < 0 and len(swipe_button.scroll_left) > 0:
+                                emulate_key_press(swipe_button.scroll_left)
+                                swipe_button.scrolled = True
+                            elif swipe_button.scroll:
+                                if event.value > 0 and len(swipe_button.swipe_right) > 0:
+                                    emulate_key_press(swipe_button.swipe_right)
+                                    swipe_button.scrolled = True
+                                elif event.value < 0 and len(swipe_button.swipe_left) > 0:
+                                    emulate_key_press(swipe_button.swipe_left)
+                                    swipe_button.scrolled = True
+                    elif event.code == ecodes.REL_X:
                         swipe_button.deltaX += event.value
 
-                        if abs(swipe_button.deltaX) > swipe_button.delta and not(swipe_button.moved):
+                        if abs(swipe_button.deltaX) > swipe_button.delta and not(swipe_button.moved) and not(swipe_button.scrolled):
                             swipe_button.moved = True
 
                         if swipe_button.scroll and swipe_button.moved:
@@ -108,7 +138,7 @@ async def task_handle_mouse_events(mouse):
                     elif event.code == ecodes.REL_Y:
                         swipe_button.deltaY += event.value
 
-                        if abs(swipe_button.deltaY) > swipe_button.delta and not(swipe_button.moved):
+                        if abs(swipe_button.deltaY) > swipe_button.delta and not(swipe_button.moved) and not(swipe_button.scrolled):
                             swipe_button.moved = True
 
                         if swipe_button.scroll and swipe_button.moved:
@@ -120,9 +150,9 @@ async def task_handle_mouse_events(mouse):
                     swipe_button.pressed = event.value
 
                     if not(swipe_button.pressed):
-                        if not(swipe_button.moved):
+                        if not(swipe_button.moved) and not(swipe_button.scrolled):
                             emulate_key_press(swipe_button.click)
-                        elif not(swipe_button.scroll):
+                        elif not(swipe_button.scroll) and not(swipe_button.scrolled):
                             if abs(swipe_button.deltaX) > abs(swipe_button.deltaY):
                                 emulate_key_press(swipe_button.swipe_right if swipe_button.deltaX > 0 else swipe_button.swipe_left)
                             else:
@@ -131,6 +161,7 @@ async def task_handle_mouse_events(mouse):
                         swipe_button.deltaX = 0
                         swipe_button.deltaY = 0
                         swipe_button.moved = False
+                        swipe_button.scrolled = False
 
         if should_forward:
             emulate_event(event.type, event.code, event.value)
