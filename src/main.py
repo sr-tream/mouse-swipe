@@ -164,7 +164,7 @@ async def run_tasks():
         tasks.append(asyncio.create_task(task_detect_new_devices()))
         get_mouses()
         await asyncio.gather(*tasks)
-    except Exception:
+    except (Exception, asyncio.CancelledError):
         pass
     finally:
         ungrab_mouses()
