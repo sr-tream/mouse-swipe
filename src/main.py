@@ -1,11 +1,13 @@
 #!/usr/bin/python3
 
-import asyncio, copy, logging
+import asyncio, copy, logging, signal
 from evdev import InputDevice, ecodes, list_devices
 from systemd.journal import JournalHandler
 from virtual_device import create_virtual_device, remove_virtual_device
 from config import read_config_file
 from mouse import Mouse
+
+_running = True
 
 def get_mouses():
     logger.info("Searching for mouses..")
@@ -172,34 +174,39 @@ async def task_detect_new_devices():
         current_paths = set(list_devices())
         if current_paths != device_paths:
             logger.info("Device change detected, restarting..")
-            # Cancel this task to trigger the cancelling of all tasks on gather
-            tasks[0].cancel()
-
-def cancel_tasks():
-    for task in tasks:
-        try:
-            if not(task.done()) and not(task.cancelled()):
-                task.cancel()
-        except Exception:
-            pass
-
-    for task in tasks:
-        try:
-            task.result()
-        except Exception:
-            pass
+            raise Exception("Device set changed")
 
 async def run_tasks():
+    global _running
+    loop = asyncio.get_running_loop()
+
+    def _request_shutdown():
+        global _running
+        _running = False
+        if tasks:
+            tasks[0].cancel()
+
+    loop.add_signal_handler(signal.SIGINT, _request_shutdown)
+    loop.add_signal_handler(signal.SIGTERM, _request_shutdown)
+
     try:
         tasks.clear()
         tasks.append(asyncio.create_task(task_detect_new_devices()))
         get_mouses()
-        await asyncio.gather(*tasks)
+        await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
     except Exception:
         pass
     finally:
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        try:
+            loop.remove_signal_handler(signal.SIGINT)
+            loop.remove_signal_handler(signal.SIGTERM)
+        except Exception:
+            pass
         ungrab_mouses()
-        cancel_tasks()
 
 if __name__ == "__main__":
     mouses, tasks = [], []
@@ -220,11 +227,7 @@ if __name__ == "__main__":
         logger.info(e)
         quit()
 
-    while True:
-        try:
-            asyncio.run(run_tasks())
-        except KeyboardInterrupt:
-            print("Exiting..")
-            break
+    while _running:
+        asyncio.run(run_tasks())
 
     remove_virtual_device(virtual_device)
